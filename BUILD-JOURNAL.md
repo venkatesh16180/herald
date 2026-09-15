@@ -42,3 +42,42 @@ soft-lead-word pattern.
 before treating something as a bug — the debug_checks approach (inspecting
 the waveform directly instead of guessing from ear) is the same instinct
 worth applying to any future audio weirdness in this project.
+
+## Phase 1 — pip self-locks its own .exe mid-upgrade on Windows
+
+**Problem:** `pip install pip-tools` triggered a pip self-upgrade (needed
+pip>=22.2, had 22.0.4) partway through, which failed with
+`[WinError 5] Access is denied` while uninstalling the old pip.exe.
+
+**Diagnosis:** Windows won't let a running process delete or overwrite its
+own executable file. `pip.exe` trying to replace itself via `pip install`
+hits that lock every time — this isn't project-specific, it's a general
+Windows/pip interaction.
+
+**Fix:** Use `python -m pip install --upgrade pip` instead of `pip install
+--upgrade pip` — invoking pip as a module through python.exe (not the
+locked pip.exe) sidesteps the self-lock. Also had to clean up a stray
+`~ip`/`~ip-22.0.4.dist-info` folder left behind by the interrupted
+uninstall (`Remove-Item -Recurse -Force venv\Lib\site-packages\~ip*`).
+
+**Why it matters:** `python -m pip` is generally the safer invocation on
+Windows for any pip self-upgrade going forward, not just this one time.
+
+## Phase 1 — Adopted pip-compile / pip-sync for dependency management
+
+**Problem:** N/A — proactive change, not a bug fix. requirements.txt had been
+an empty placeholder since Phase 0's scaffold, drifting from what was
+actually installed.
+
+**Fix:** Introduced pip-tools. requirements.in now lists only direct
+dependencies (kokoro, soundfile, ollama, requests, feedparser, plus
+en_core_web_sm pinned via its GitHub release URL since it's not a normal
+PyPI package). pip-compile generates a fully pinned requirements.txt;
+pip-sync keeps the venv matching it exactly — including removing anything
+installed outside that contract, which is how the en_core_web_sm churn
+surfaced and got fixed properly.
+
+**Why it matters:** CI (Phase 6) and Docker (Phase 7) still just run
+`pip install -r requirements.txt` — this is additive, not a rework. Going
+forward, every new package goes into requirements.in first, then
+pip-compile + pip-sync, never a bare pip install.
