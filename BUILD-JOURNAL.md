@@ -81,3 +81,22 @@ surfaced and got fixed properly.
 `pip install -r requirements.txt` — this is additive, not a rework. Going
 forward, every new package goes into requirements.in first, then
 pip-compile + pip-sync, never a bare pip install.
+
+## Phase 2 — Verifying a bounded retry loop requires forcing the failure case
+
+**Problem:** Two natural-language test inputs (a 2-headline draft, then a
+20-headline draft) both composed well under the 220-word budget on the first
+pass. attempts stayed at 1 both times \u2014 the retry path was never actually
+exercised, only assumed to work because the wiring looked right.
+
+**Fix:** Mocked ollama.chat via unittest.mock.patch to return a fixed
+300-word reply regardless of input. Since the mock never varies, this
+proves two things a natural-language test can't: that route_on_length
+correctly sends an over-budget draft to tighten, and that MAX_ATTEMPTS
+actually bounds the loop even when the content never improves (attempts
+landed at exactly 2, not more, not stuck at 1).
+
+**Why it matters:** A happy-path test that never enters an error/retry
+branch tells you nothing about that branch. This same mock-the-LLM-call
+pattern is exactly what Phase 6's CI test suite needs to run green with no
+Ollama server available \u2014 this was effectively a preview of it.

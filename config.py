@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 OWM_API_KEY = os.environ['OWM_API_KEY']
 CITY = 'Hyderabad,IN'
 RSS_FEEDS = [
@@ -6,3 +9,5 @@ RSS_FEEDS = [
     'https://news.ycombinator.com/rss',
 ]
 MAX_HEADLINES = 5
+BRAIN_MODEL = 'qwen3:4b'
+MAX_ATTEMPTS = 2
