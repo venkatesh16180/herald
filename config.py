@@ -11,3 +11,4 @@ RSS_FEEDS = [
 MAX_HEADLINES = 5
 BRAIN_MODEL = 'qwen3:4b'
 MAX_ATTEMPTS = 2
+TTS_VOICE = 'af_heart'
