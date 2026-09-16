@@ -8,3 +8,5 @@ langgraph
 python-dotenv
 fastapi
 uvicorn
+
+pytest

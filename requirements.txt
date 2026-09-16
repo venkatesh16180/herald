@@ -53,6 +53,7 @@ cloudpickle==3.1.2
 colorama==0.4.6
     # via
     #   loguru
+    #   pytest
     #   tqdm
     #   typer
     #   wasabi
@@ -83,7 +84,9 @@ en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_
 espeakng-loader==0.2.4
     # via misaki
 exceptiongroup==1.3.1
-    # via anyio
+    # via
+    #   anyio
+    #   pytest
 fastapi==0.141.1
     # via -r requirements.in
 feedparser==6.0.14
@@ -129,6 +132,8 @@ idna==3.19
     #   httpx
     #   httpx2
     #   requests
+iniconfig==2.3.0
+    # via pytest
 isodate==0.7.2
     # via
     #   csvw
@@ -215,12 +220,15 @@ packaging==26.3
     #   huggingface-hub
     #   langchain-core
     #   langsmith
+    #   pytest
     #   spacy
     #   thinc
     #   transformers
     #   weasel
 phonemizer-fork==3.3.2
     # via misaki
+pluggy==1.6.0
+    # via pytest
 preshed==3.0.13
     # via
     #   spacy
@@ -240,9 +248,13 @@ pydantic==2.13.5
 pydantic-core==2.46.5
     # via pydantic
 pygments==2.21.0
-    # via rich
+    # via
+    #   pytest
+    #   rich
 pyparsing==3.3.2
     # via rdflib
+pytest==9.1.1
+    # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via csvw
 python-dotenv==1.2.3
@@ -319,6 +331,8 @@ thinc==8.3.13
     # via spacy
 tokenizers==0.23.2
     # via transformers
+tomli==2.4.1
+    # via pytest
 torch==2.14.0
     # via
     #   curated-transformers

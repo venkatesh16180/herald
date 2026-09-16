@@ -153,3 +153,29 @@ get_weather() always reads config.CITY regardless of what's passed. Left
 as-is deliberately for this phase; wiring it through is a small,
 well-understood follow-up whenever there's a reason to actually override
 city per-request.
+
+## Phase 6 — pytest can't find project modules; pytest.ini needs -Encoding ascii
+
+**Problem 1:** `pytest -v` failed with `ModuleNotFoundError: No module
+named 'graph'` even though graph.py exists at the project root.
+
+**Diagnosis:** pytest adds each test file's own directory to sys.path by
+default, not the project root -- tests/test_graph.py had no way to find
+graph.py one level up.
+
+**Fix:** Added pytest.ini at the repo root with `pythonpath = .`
+
+**Problem 2:** pytest then failed to parse that exact file:
+`unexpected line: '\ufeff[pytest]'`
+
+**Diagnosis:** Same root cause flagged back in Phase 1 -- PowerShell's
+`Out-File -Encoding utf8` always writes a UTF-8 byte-order-mark.
+pip-compile tolerated it; pytest's INI parser doesn't.
+
+**Fix:** `Out-File -Encoding ascii` instead, since pytest.ini's content is
+plain ASCII anyway.
+
+**Why it matters:** This BOM issue has now bitten three times across this
+project (requirements.in in Phase 1, and now this). Worth defaulting to
+-Encoding ascii for any plain-text config file going forward, and only
+reaching for utf8 when non-ASCII content actually requires it.
