@@ -7,7 +7,9 @@
 addict==2.4.0
     # via misaki
 annotated-doc==0.0.5
-    # via typer
+    # via
+    #   fastapi
+    #   typer
 annotated-types==0.8.0
     # via pydantic
 anyio==4.15.1
@@ -15,6 +17,7 @@ anyio==4.15.1
     #   httpx
     #   httpx2
     #   langsmith
+    #   starlette
 attrs==26.1.0
     # via
     #   jsonschema
@@ -42,6 +45,7 @@ click==8.5.0
     # via
     #   huggingface-hub
     #   spacy
+    #   uvicorn
 cloudpathlib==0.25.0
     # via weasel
 cloudpickle==3.1.2
@@ -80,6 +84,8 @@ espeakng-loader==0.2.4
     # via misaki
 exceptiongroup==1.3.1
     # via anyio
+fastapi==0.141.1
+    # via -r requirements.in
 feedparser==6.0.14
     # via -r requirements.in
 feedparser-sgmllib==2.1.0
@@ -96,6 +102,7 @@ h11==0.16.0
     # via
     #   httpcore
     #   httpcore2
+    #   uvicorn
 hf-xet==1.6.0
     # via huggingface-hub
 httpcore==1.0.9
@@ -222,6 +229,7 @@ pycparser==3.0
     # via cffi
 pydantic==2.13.5
     # via
+    #   fastapi
     #   langchain-core
     #   langgraph
     #   langsmith
@@ -299,6 +307,8 @@ srsly==2.5.3
     #   spacy
     #   thinc
     #   weasel
+starlette==1.6.0
+    # via fastapi
 sympy==1.14.0
     # via torch
 tenacity==9.1.4
@@ -336,6 +346,7 @@ typing-extensions==4.16.0
     #   cloudpathlib
     #   confection
     #   exceptiongroup
+    #   fastapi
     #   httpx2
     #   huggingface-hub
     #   langchain-core
@@ -346,10 +357,14 @@ typing-extensions==4.16.0
     #   pydantic-core
     #   referencing
     #   soundfile
+    #   starlette
     #   torch
     #   typing-inspection
+    #   uvicorn
 typing-inspection==0.4.4
-    # via pydantic
+    # via
+    #   fastapi
+    #   pydantic
 uritemplate==4.2.0
     # via csvw
 urllib3==2.7.0
@@ -358,6 +373,8 @@ uuid-utils==0.17.1
     # via
     #   langchain-core
     #   langsmith
+uvicorn==0.53.0
+    # via -r requirements.in
 wasabi==1.1.3
     # via
     #   spacy

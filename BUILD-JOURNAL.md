@@ -144,3 +144,12 @@ especially on CPU-only TTS with a small model. The real value here was
 catching that "more padding" doesn't monotonically mean "safer" --
 worth remembering before reaching for this same trim-by-threshold pattern
 on a future project without checking the boundary math first.
+
+## Phase 5 — BriefingRequest.city accepted but not wired through
+
+**Note, not a bug:** BriefingRequest.city validates and is accepted by
+POST /briefing/generate, but generate_briefing() doesn't actually use it --
+get_weather() always reads config.CITY regardless of what's passed. Left
+as-is deliberately for this phase; wiring it through is a small,
+well-understood follow-up whenever there's a reason to actually override
+city per-request.
