@@ -1,0 +1,15 @@
+services:
+  ollama:
+    image: ollama/ollama
+    volumes: ["ollama_models:/root/.ollama"]
+    ports: ["11434:11434"]
+  herald:
+    build: .
+    depends_on: [ollama]
+    environment:
+      - HERALD_OLLAMA_HOST=http://ollama:11434
+    env_file: .env
+    volumes: ["./data:/app/data"]
+    ports: ["8000:8000"]
+volumes:
+  ollama_models:

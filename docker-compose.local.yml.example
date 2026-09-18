@@ -1,0 +1,11 @@
+# Copy this to docker-compose.local.yml for local development on
+# RAM-constrained machines. Requires Ollama running on the host
+# (not containerized) with the model already pulled.
+services:
+  herald:
+    build: .
+    environment:
+      - HERALD_OLLAMA_HOST=http://host.docker.internal:11434
+    env_file: .env
+    volumes: ["./data:/app/data"]
+    ports: ["8000:8000"]

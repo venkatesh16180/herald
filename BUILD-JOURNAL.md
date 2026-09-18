@@ -179,3 +179,27 @@ plain ASCII anyway.
 project (requirements.in in Phase 1, and now this). Worth defaulting to
 -Encoding ascii for any plain-text config file going forward, and only
 reaching for utf8 when non-ASCII content actually requires it.
+
+## Phase 7 — Containerized pipeline works but is severely memory-constrained on this hardware
+
+**Problem:** POST /briefing/generate through the single-container
+(docker-compose.local.yml) setup correctly returns a full, valid response
+-- but takes 15-30+ minutes per request, including on a back-to-back
+request where the model should still have been warm.
+
+**Diagnosis:** This 8GB machine is running the herald container (torch,
+kokoro, spacy all resident in memory) alongside the host's Ollama process
+(qwen3:4b loaded) simultaneously. Combined with WSL2's VM overhead and
+everything else running, there likely isn't enough real memory for both to
+operate without heavy swapping. Correctness is proven; performance is not
+representative of what this would look like on adequate hardware.
+
+**Fix:** None applied -- documented as a known hardware-ceiling limitation
+rather than chased further. Confirmed the underlying pipeline logic itself
+is correct via the bare-venv testing in Phases 0-5, which ran comfortably
+faster on the same machine without Docker's added memory overhead on top.
+
+**Why it matters:** A container proving "correct" and a container proving
+"production-ready" are different claims. This is honest information for
+anyone (including a future me on better hardware) about what this setup
+actually needs to run well.

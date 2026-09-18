@@ -5,7 +5,7 @@ from graph import briefing_graph
 def test_briefing_graph_terminates_within_word_budget():
     fake_reply = MagicMock()
     fake_reply.message.content = 'Good morning. ' * 10  # short, well under 220 words
-    with patch('graph.ollama.chat', return_value=fake_reply):
+    with patch('graph._client.chat', return_value=fake_reply):
         state = {
             'weather': {'description': 'clear', 'temp_c': 28, 'feels_like_c': 30},
             'headlines': ['Test headline'],
@@ -19,7 +19,7 @@ def test_briefing_graph_terminates_within_word_budget():
 def test_briefing_graph_bounds_retry_loop():
     fake_reply = MagicMock()
     fake_reply.message.content = 'word ' * 300  # permanently over budget
-    with patch('graph.ollama.chat', return_value=fake_reply):
+    with patch('graph._client.chat', return_value=fake_reply):
         state = {
             'weather': {'description': 'clear', 'temp_c': 28, 'feels_like_c': 30},
             'headlines': ['Test headline'],

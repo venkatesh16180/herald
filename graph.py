@@ -1,6 +1,8 @@
 from typing import TypedDict
+from config import BRAIN_MODEL, MAX_ATTEMPTS, OLLAMA_HOST
 import ollama
-from config import BRAIN_MODEL, MAX_ATTEMPTS
+
+_client = ollama.Client(host=OLLAMA_HOST)
 
 class BriefingState(TypedDict):
     weather: dict
@@ -25,7 +27,7 @@ def compose_draft(state: BriefingState) -> BriefingState:
         f"(feels like {state['weather']['feels_like_c']}C)\n"
         f"Headlines: {'; '.join(state['headlines'])}"
     )
-    reply = ollama.chat(model=BRAIN_MODEL, messages=[{'role': 'user', 'content': prompt}])
+    reply = _client.chat(model=BRAIN_MODEL, messages=[{'role': 'user', 'content': prompt}])
     draft = reply.message.content.strip()
     return {
         **state,
@@ -46,7 +48,7 @@ def tighten(state: BriefingState) -> BriefingState:
         f"Rewrite this to under 200 words, same facts, same tone, "
         f"nothing cut that changes the meaning:\n\n{state['draft']}"
     )
-    reply = ollama.chat(model=BRAIN_MODEL, messages=[{'role': 'user', 'content': prompt}])
+    reply = _client.chat(model=BRAIN_MODEL, messages=[{'role': 'user', 'content': prompt}])
     draft = reply.message.content.strip()
     return {**state, 'draft': draft, 'word_count': len(draft.split()), 'attempts': state['attempts'] + 1}
 
