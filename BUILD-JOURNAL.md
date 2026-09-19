@@ -86,7 +86,7 @@ pip-compile + pip-sync, never a bare pip install.
 
 **Problem:** Two natural-language test inputs (a 2-headline draft, then a
 20-headline draft) both composed well under the 220-word budget on the first
-pass. attempts stayed at 1 both times \u2014 the retry path was never actually
+pass. attempts stayed at 1 both times — the retry path was never actually
 exercised, only assumed to work because the wiring looked right.
 
 **Fix:** Mocked ollama.chat via unittest.mock.patch to return a fixed
@@ -99,51 +99,37 @@ landed at exactly 2, not more, not stuck at 1).
 **Why it matters:** A happy-path test that never enters an error/retry
 branch tells you nothing about that branch. This same mock-the-LLM-call
 pattern is exactly what Phase 6's CI test suite needs to run green with no
-Ollama server available \u2014 this was effectively a preview of it.
+Ollama server available — this was effectively a preview of it.
 
 ## Phase 3 — Leading silence in synthesized audio, partially mitigated
 
 **Problem:** Kokoro's concatenated output had ~300ms of true digital silence
-(measured, not perceived -- peak amplitude ~0.00003) before any real speech,
+(measured, not perceived — peak amplitude ~0.00003) before any real speech,
 making playback sound like it hadn't started.
 
-**Diagnosis:** Confirmed via direct waveform inspection, not by ear. Trimming
-the silence down too aggressively (50ms pad) caused the actual first word to
-sound clipped instead -- likely the playback device's own anti-pop fade-in
-ramp landing on top of real audio rather than silence.
+**Diagnosis:** Confirmed via direct waveform inspection, not by ear.
+Tested pad_ms at 0, 50, 150, and 500 in speak.py's amplitude-threshold trim.
+Found a real bug in the trim math along the way, not just a tuning
+question: `start = max(0, crossing_index - pad_samples)` clamps to 0
+whenever pad_ms exceeds the actual gap length — so pad_ms=500 against a
+~300ms gap silently did nothing, reproducing the original problem.
+pad_ms=0 clipped directly into the first word's onset consonant. Values in
+between (50/150ms) were partial improvements but still audibly imperfect —
+likely the playback device's own anti-pop fade-in ramp landing on top of
+real audio rather than silence.
 
-**Fix:** Amplitude-threshold trim in speak.py, landed on a 250ms pad as a
-middle ground. Reduces the original ~300ms gap without triggering the
-clipped-onset problem at 50ms, but does not eliminate the perceptual issue
-entirely -- accepted as a known minor limitation rather than pursued further.
-
-**Why it matters:** Not every audio artifact is worth chasing to zero,
-especially on CPU-only TTS. Measuring the waveform directly (not trusting
-ear alone) was still worthwhile -- it's what caught the 50ms overcorrection
-before it shipped as "fixed."
-
-## Phase 3 — Leading-silence trim has a narrow, imperfect working range
-
-**Problem:** Kokoro's output had ~300ms of true digital silence before real
-speech (confirmed via waveform, peak ~0.00003). An amplitude-threshold trim
-was added to speak.py to cut it.
-
-**Diagnosis:** Tested pad_ms at 0, 50, 150, and 500. Found a real bug in the
-trim math, not just a tuning question: `start = max(0, crossing_index -
-pad_samples)` clamps to 0 whenever pad_ms exceeds the actual gap length --
-so pad_ms=500 against a ~300ms gap silently did nothing, reproducing the
-original problem. pad_ms=0 clips directly into the first word's onset
-consonant. Every value tried in between (50/150ms) was an audible partial
-improvement, never fully clean.
-
-**Fix:** Deferred, not resolved. Shipping with pad_ms=150 as the least-bad
-compromise found. Documented here rather than claimed fixed.
+**Fix:** Shipped with pad_ms=250 — a middle ground that avoids both the
+500ms no-op and the 0-150ms clipping range, without fully eliminating the
+perceptual issue. Documented as a known minor limitation rather than
+claimed fully fixed.
 
 **Why it matters:** Not every audio artifact is worth chasing to zero,
-especially on CPU-only TTS with a small model. The real value here was
-catching that "more padding" doesn't monotonically mean "safer" --
-worth remembering before reaching for this same trim-by-threshold pattern
-on a future project without checking the boundary math first.
+especially on CPU-only TTS with a small model. Two things worth
+remembering for a future project: measuring the waveform directly (not
+trusting ear alone) is what caught the 50ms overcorrection before it
+shipped as "fixed," and "more padding" doesn't monotonically mean
+"safer" — check the boundary math before reaching for this same
+trim-by-threshold pattern again.
 
 ## Phase 5 — BriefingRequest.city accepted but not wired through
 
@@ -180,26 +166,78 @@ project (requirements.in in Phase 1, and now this). Worth defaulting to
 -Encoding ascii for any plain-text config file going forward, and only
 reaching for utf8 when non-ASCII content actually requires it.
 
-## Phase 7 — Containerized pipeline works but is severely memory-constrained on this hardware
+## Phase 7 — Containerized pipeline correctness vs. performance on constrained hardware
 
-**Problem:** POST /briefing/generate through the single-container
-(docker-compose.local.yml) setup correctly returns a full, valid response
--- but takes 15-30+ minutes per request, including on a back-to-back
-request where the model should still have been warm.
+**Problem:** POST /briefing/generate through the containerized setup
+(docker-compose.local.yml) took 15-30+ minutes per request, including on a
+back-to-back call where the model should still have been warm.
 
-**Diagnosis:** This 8GB machine is running the herald container (torch,
-kokoro, spacy all resident in memory) alongside the host's Ollama process
-(qwen3:4b loaded) simultaneously. Combined with WSL2's VM overhead and
-everything else running, there likely isn't enough real memory for both to
-operate without heavy swapping. Correctness is proven; performance is not
-representative of what this would look like on adequate hardware.
+**Diagnosis:** Same code, same model, same machine ran in seconds during
+Phases 0-5 without Docker involved. The only changed variable is WSL2's
+virtualization layer — the herald container (torch/kokoro/spacy resident)
+competes for WSL2 VM memory while the host's Ollama process competes for
+host memory, on an 8GB machine with little headroom for either. Not fully
+confirmed via a live Task Manager read during a slow request, but the
+before/after comparison is strong circumstantial evidence.
 
-**Fix:** None applied -- documented as a known hardware-ceiling limitation
-rather than chased further. Confirmed the underlying pipeline logic itself
-is correct via the bare-venv testing in Phases 0-5, which ran comfortably
-faster on the same machine without Docker's added memory overhead on top.
+**Fix:** None needed at the application level — this is a resource
+ceiling, not a code defect. Documented rather than chased further.
+Correctness is proven; performance is not representative of what this
+would look like on adequate hardware.
 
-**Why it matters:** A container proving "correct" and a container proving
-"production-ready" are different claims. This is honest information for
-anyone (including a future me on better hardware) about what this setup
-actually needs to run well.
+**Why it matters:** Correctness and performance are separate claims. This
+container is proven correct on this hardware and would very likely run
+dramatically faster on a machine with adequate RAM — worth remembering
+before assuming a slow container run means broken code.
+
+## Phase 8 — Disk-space crisis corrupted the host Ollama install
+
+**Problem:** ollama.chat() failed with "llama-server binary not found",
+searching eight plausible paths and finding none, despite ollama list and
+ollama --version both working normally.
+
+**Diagnosis:** Compute-backend DLLs (CUDA/ROCm/Vulkan) were all present and
+correctly dated, but llama-server.exe itself was missing entirely. File
+timestamps lined up with the exact window during Phase 7's Docker disk-space
+crisis, when C: dropped to ~6GB free -- strongly suggesting Ollama's
+background auto-updater ran during that window and silently failed
+partway through extracting a new version.
+
+**Fix:** Reinstalled Ollama over the existing install (irm
+https://ollama.com/install.ps1 | iex). Repaired the missing binary without
+touching already-pulled models, which live in a separate directory.
+
+**Why it matters:** A disk-space crisis in one tool (Docker/WSL2) can
+silently corrupt a completely unrelated program (Ollama) if it happens to
+be mid-update at the same moment. Worth checking core dependencies with a
+basic smoke test after any low-disk-space incident, not just the tool that
+caused it.
+
+## Phase 8 — Two real issues while testing the city/timezone feature
+
+**Problem 1:** First requests after code changes kept returning old
+(Hyderabad) data despite editing weather.py/clock.py/graph.py/main.py.
+
+**Diagnosis:** docker compose up only rebuilds an image if one doesn't
+already exist. Since herald-herald:latest was already built earlier,
+every up/down/up cycle reused the stale image -- the container was
+faithfully running pre-change code the whole time. The temperature
+mismatch (32C "London" vs. real London weather) was the tell.
+
+**Fix:** docker compose up --build forces a real rebuild. Going forward:
+after any code change intended to run in Docker, use --build explicitly
+rather than assume compose picked it up.
+
+**Problem 2:** During the rebuild's first request, Kokoro's voice-file
+HEAD-check to Hugging Face failed with DNS resolution errors, retried
+5 times with backoff, then succeeded anyway once network came back.
+
+**Diagnosis:** Transient network hiccup, likely related to the container
+network settling right after a fresh build/network recreation. Not a
+code bug -- huggingface_hub's own retry logic handled it correctly and
+the request ultimately succeeded (84 words, valid response).
+
+**Why it matters:** The --build habit is the one worth internalizing --
+this bug pattern (editing code, testing in Docker, seeing no change take
+effect) is easy to mistake for a code problem when it's actually a stale
+image.

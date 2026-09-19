@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+import requests as _requests
 from datetime import datetime
 from schemas import BriefingRequest, BriefingResponse
 from graph import briefing_graph
@@ -20,22 +21,20 @@ def health():
 @app.post('/briefing/generate', response_model=BriefingResponse)
 def generate_briefing(req: BriefingRequest):
     log.info('Briefing requested')
+    try:
+        weather = get_weather(city=req.city)
+    except _requests.HTTPError:
+        raise HTTPException(status_code=400, detail=f"Could not find weather for city: {req.city}")
     state = {
-        'weather': get_weather(),
+        'weather': weather,
         'headlines': get_headlines(),
-        'time_context': get_time_context(),
-        'draft': '',
-        'word_count': 0,
-        'attempts': 0,
+        'time_context': get_time_context(weather['timezone_offset']),
+        'draft': '', 'word_count': 0, 'attempts': 0,
     }
     result = briefing_graph.invoke(state)
     now = datetime.now()
     audio_path = synthesize(result['draft'], f"data/briefing_{now:%Y%m%d_%H%M}.wav")
     log_briefing(result['draft'], audio_path, result['word_count'], now)
     log.info(f"Briefing generated, {result['word_count']} words")
-    return BriefingResponse(
-        script=result['draft'],
-        audio_path=audio_path,
-        word_count=result['word_count'],
-        generated_at=now,
-    )
+    return BriefingResponse(script=result['draft'], audio_path=audio_path,
+                             word_count=result['word_count'], generated_at=now)

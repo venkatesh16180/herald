@@ -21,12 +21,13 @@ PERSONA = (
 
 def compose_draft(state: BriefingState) -> BriefingState:
     prompt = (
-        f"{PERSONA}\nTime: {state['time_context']['time_str']}, "
-        f"{state['time_context']['weekday']}\nWeather: "
-        f"{state['weather']['description']}, {state['weather']['temp_c']}C "
-        f"(feels like {state['weather']['feels_like_c']}C)\n"
-        f"Headlines: {'; '.join(state['headlines'])}"
-    )
+    f"{PERSONA}\nLocation: {state['weather'].get('resolved_city', 'your area')}\n"
+    f"Time: {state['time_context']['time_str']}, "
+    f"{state['time_context']['weekday']}\nWeather: "
+    f"{state['weather']['description']}, {state['weather']['temp_c']}C "
+    f"(feels like {state['weather']['feels_like_c']}C)\n"
+    f"Headlines: {'; '.join(state['headlines'])}"
+)
     reply = _client.chat(model=BRAIN_MODEL, messages=[{'role': 'user', 'content': prompt}])
     draft = reply.message.content.strip()
     return {
