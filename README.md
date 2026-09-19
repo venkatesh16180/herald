@@ -1,6 +1,7 @@
 # Herald
 
 [![CI](https://github.com/venkatesh16180/herald/actions/workflows/ci.yml/badge.svg)](https://github.com/venkatesh16180/herald/actions)
+[![Release](https://img.shields.io/github/v/tag/venkatesh16180/herald?label=release)](https://github.com/venkatesh16180/herald/releases)
 
 A local-first, agentic morning briefing assistant. Herald pulls live weather and news, composes a short spoken briefing with a local LLM (bounded by a retry loop that enforces a spoken-length budget), voices it with a local TTS model, and serves the whole thing over a real HTTP API — no cloud LLM calls, no API keys sent anywhere but OpenWeatherMap.
 
@@ -100,6 +101,29 @@ curl -X POST http://localhost:8000/briefing/generate \
 }
 ```
 
+Optionally override the city for a single request — weather and local time (via OpenWeatherMap's UTC offset) are both resolved for whatever city you pass, not just the configured default:
+
+```bash
+curl -X POST http://localhost:8000/briefing/generate \
+  -H "Content-Type: application/json" \
+  -d '{"city": "London,GB"}'
+```
+
+```json
+{
+  "script": "Good afternoon\u2014it's 12:18 PM Saturday here in London. Overcast clouds, 22 degrees Celsius, feels like 22. Just to keep you updated: US and Denmark reached a deal over Greenland after Trump's earlier annexation threats...",
+  "audio_path": "data/briefing_20260919_1131.wav",
+  "word_count": 84,
+  "generated_at": "2026-09-19T11:31:56.535946"
+}
+```
+
+An unrecognized city returns a clean `400` rather than a server error:
+
+```json
+{"detail": "Could not find weather for city: NotARealCityXYZ"}
+```
+
 Interactive API docs (Swagger UI) are available at `http://localhost:8000/docs` once the server is running.
 
 ## Testing
@@ -113,7 +137,6 @@ The suite runs with **no live Ollama server and no network access** — `ollama.
 ## Known Limitations
 
 - **Performance on constrained hardware.** This project was built and tested on an 8GB, no-GPU laptop. Running the containerized pipeline (Herald in Docker + a host or containerized Ollama) on this hardware is noticeably slower than running it directly in a local Python environment, since both the container runtime and the LLM are competing for a small memory budget. On a machine with more RAM and/or a GPU, this should run substantially faster.
-- **`BriefingRequest.city` is accepted but not yet wired through** — the endpoint validates the field but always uses the configured default city. Left as a documented, deliberate gap rather than a bug.
 
 ## License
 
